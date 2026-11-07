@@ -4,6 +4,7 @@
 // GET requests are saved on Vercel's network, so a repeat answer plays instantly and costs no ElevenLabs credits.
 
 const DEFAULT_VOICE = "P5UCj2FDnKwXbWMj78sE";
+const num = (v, d) => { const n = parseFloat(v); return isFinite(n) && n >= 0 && n <= 1 ? n : d; };
 const cache = new Map();
 
 module.exports = async (req, res) => {
@@ -28,7 +29,13 @@ module.exports = async (req, res) => {
       body: JSON.stringify({
         text,
         model_id: process.env.ELEVENLABS_MODEL || "eleven_multilingual_v2",
-        voice_settings: { stability: 0.65, similarity_boost: 0.85, style: 0.05 }
+        // More expressive but still steady. Fine-tune in Vercel without new files: ELEVENLABS_STABILITY (lower = more lively) and ELEVENLABS_STYLE (higher = more expressive).
+        voice_settings: {
+          stability: num(process.env.ELEVENLABS_STABILITY, 0.42),
+          similarity_boost: 0.85,
+          style: num(process.env.ELEVENLABS_STYLE, 0.3),
+          use_speaker_boost: true
+        }
       })
     });
     if (!r.ok) { console.error("voice failed", r.status, (await r.text().catch(() => "")).slice(0, 200)); res.setHeader("Cache-Control", "no-store"); return res.status(502).json({ error: "voice_failed" }); }
