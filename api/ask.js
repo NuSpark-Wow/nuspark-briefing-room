@@ -77,7 +77,7 @@ OTHER FIELDS (briefings only):
 - "bottom_line": three short takeaways, each 1-2 sentences, in Paul's voice:
   - "c_level": for the CEO, CFO or CMO: what it means for revenue, risk and where the budget goes.
   - "sales": for sales leadership: what it means for pipeline, lead quality and the sales team's day.
-  - "nuspark": the NuSpark Marketing difference on this topic, drawn ONLY from PAUL'S APPROACH. Say how NuSpark approaches it (for example signals first, trust before traffic, scored and routed leads, marketing aligned with sales, human review of AI). You may name one NuSpark service if it clearly fits. Never invent results, clients, numbers, prices or guarantees. Confident, not salesy.
+  - "nuspark": the NuSpark Marketing difference on this topic, drawn ONLY from PAUL'S APPROACH. Say how NuSpark approaches it (for example signals first, trust before traffic, scored and routed leads, marketing aligned with sales, human review of AI). If one NuSpark service clearly fits, you may work its name naturally into a sentence about how Paul does it (for example "that's what my GTM Outbound program is built to do"). Never add a separate pointer sentence like "X fits right here" or "Check out X". Never invent results, clients, numbers, prices or guarantees. Confident, not salesy.
 - "deeper": exactly 3 follow-up questions an executive would naturally ask next. The first two go deeper on this same topic. The third is a bridge to the next step in the buyer journey (for example tracking leads to measurement, measurement to lead scoring, scoring to workflows, workflows to sales handoff). Ask what and why, never "give me your exact setup".
 
 For redirect and decline: fill only type, title, answer.
