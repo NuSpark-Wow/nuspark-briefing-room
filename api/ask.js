@@ -138,7 +138,7 @@ async function anthropic(body) {
 
 async function callTool(system, tool, user, maxTokens, check, model) {
   const data = await anthropic({
-    model: model || MODEL, max_tokens: maxTokens, system, thinking: { type: "disabled" },
+    model: model || MODEL, max_tokens: maxTokens, system,
     tools: [tool], tool_choice: { type: "auto" },
     messages: [{ role: "user", content: user }]
   });
