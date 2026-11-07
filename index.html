@@ -957,7 +957,7 @@ async function prepareAudio(){
   if (!voiceOff) {
     try {
       const r = speech.length <= 3200
-        ? await fetch("/api/speak?v=2&t=" + encodeURIComponent(speech))      // saved on Vercel's network: repeats are free
+        ? await fetch("/api/speak?v=3&t=" + encodeURIComponent(speech))      // saved on Vercel's network: repeats are free
         : await fetch("/api/speak", { method:"POST", headers:{ "content-type":"application/json" }, body: JSON.stringify({ text: speech }) });
       if (r.status === 501) voiceOff = true;
       else if (r.ok) {
