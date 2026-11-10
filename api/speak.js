@@ -22,12 +22,15 @@ module.exports = async (req, res) => {
 
   const text = String((isGet ? req.query.t : (req.body || {}).text) || "").trim().slice(0, 4000);
   if (!text) return res.status(400).json({ error: "empty" });
+  const sp = String((isGet ? req.query.s : (req.body || {}).speed) || "");
+  const speed = ({ slow: 0.85, fast: 1.15 })[sp] || 1.0;   // Slower, Normal, Faster
+  const ck = speed + "|" + text;
   const ok = out => {
     res.setHeader("Cache-Control", isGet ? "public, s-maxage=2592000, stale-while-revalidate=604800" : "no-store");
     return res.json(out);
   };
   const fail = () => { res.setHeader("Cache-Control", "no-store"); return res.status(502).json({ error: "voice_failed" }); };
-  if (cache.has(text)) return ok(cache.get(text));
+  if (cache.has(ck)) return ok(cache.get(ck));
 
   // v4 only takes stability and similarity; v2 also takes style and speaker boost
   const isV4 = /v4/i.test(model);
@@ -36,6 +39,7 @@ module.exports = async (req, res) => {
     similarity_boost: num(process.env.ELEVENLABS_SIMILARITY, 0.85)
   };
   if (!isV4) { voice_settings.style = num(process.env.ELEVENLABS_STYLE, 0.3); voice_settings.use_speaker_boost = true; }
+  if (speed !== 1.0) voice_settings.speed = speed;
   const body = JSON.stringify({ text, model_id: model, voice_settings });
   const headers = { "xi-api-key": key, "content-type": "application/json" };
   const base = `https://api.elevenlabs.io/v1/text-to-speech/${voice}`;
@@ -46,7 +50,7 @@ module.exports = async (req, res) => {
     if (r.ok) {
       const d = await r.json();
       const out = { audio: d.audio_base64, alignment: d.alignment || d.normalized_alignment || null, model };
-      if (out.audio) { remember(text, out); return ok(out); }
+      if (out.audio) { remember(ck, out); return ok(out); }
     } else console.error("voice with timing failed", r.status, (await r.text().catch(() => "")).slice(0, 200));
 
     // 2) plain audio if this model can't give timing; the page then follows the voice by time
@@ -54,14 +58,14 @@ module.exports = async (req, res) => {
     if (!r.ok) { console.error("voice failed", r.status, (await r.text().catch(() => "")).slice(0, 200)); return fail(); }
     const buf = Buffer.from(await r.arrayBuffer());
     const out = { audio: buf.toString("base64"), alignment: null, model };
-    remember(text, out); return ok(out);
+    remember(ck, out); return ok(out);
   } catch (e) {
     console.error("voice error", e.message);
     return fail();
   }
 };
 
-function remember(text, out) {
+function remember(ck, out) {
   if (cache.size > 200) cache.clear();
   cache.set(text, out);
 }
