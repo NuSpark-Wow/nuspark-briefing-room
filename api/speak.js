@@ -55,6 +55,11 @@ module.exports = async (req, res) => {
 
     // 2) plain audio if this model can't give timing; the page then follows the voice by time
     r = await fetch(`${base}?output_format=mp3_44100_128`, { method: "POST", headers, body });
+    if (!r.ok && voice_settings.speed) {
+      console.error("voice failed with speed", r.status, (await r.text().catch(() => "")).slice(0, 200));
+      delete voice_settings.speed;
+      r = await fetch(`${base}?output_format=mp3_44100_128`, { method: "POST", headers, body: JSON.stringify({ text, model_id: model, voice_settings }) });
+    }
     if (!r.ok) { console.error("voice failed", r.status, (await r.text().catch(() => "")).slice(0, 200)); return fail(); }
     const buf = Buffer.from(await r.arrayBuffer());
     const out = { audio: buf.toString("base64"), alignment: null, model };
@@ -67,5 +72,5 @@ module.exports = async (req, res) => {
 
 function remember(ck, out) {
   if (cache.size > 200) cache.clear();
-  cache.set(text, out);
+  cache.set(ck, out);
 }
