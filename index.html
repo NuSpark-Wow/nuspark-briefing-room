@@ -100,10 +100,11 @@ button{font-family:inherit;cursor:pointer}
 .cta a{display:block;margin-top:12px;text-align:center;background:var(--gold);color:#fff;text-decoration:none;font-weight:800;font-size:16px;padding:13px 14px;border-radius:12px;box-shadow:0 3px 0 #b84b00}
 .cta small{display:block;margin-top:8px;font-size:12.5px;color:#c9d6ea;text-align:center}
 .cats{display:flex;flex-wrap:wrap;gap:8px;padding:2px 2px 8px;margin:14px 0 2px}
-@media (max-width:700px){.cats{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:thin}}
 .cats button{flex:none;border:1px solid var(--line);background:var(--card);border-radius:12px;padding:10px 14px;font-weight:700;font-size:14.5px;color:var(--soft);white-space:nowrap}
 .cats button.on{background:var(--accent-d);border-color:var(--accent-d);color:#fff}
 .cats button:hover:not(.on){border-color:var(--accent);color:var(--accent)}
+/* on phones the topics sit in two columns of boxes, so nothing needs sideways swiping */
+@media (max-width:700px){.cats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.cats button{min-width:0;font-size:14px;white-space:normal;text-align:center;line-height:1.25;min-height:52px;padding:10px 8px}}
 
 .deeper{margin-top:16px}
 .deeper h3{font-size:15px}
@@ -194,6 +195,11 @@ button{font-family:inherit;cursor:pointer}
         <button id="vWoman" class="hide">🔊 Woman</button>
         <button id="vMute" aria-label="Mute: no voice, read the words">🔇 Mute</button>
       </div>
+      <div class="toggle" role="group" aria-label="Voice speed">
+        <button id="sSlow">🐢 Slower</button>
+        <button id="sNormal" class="on">▶ Normal</button>
+        <button id="sFast">🐇 Faster</button>
+      </div>
     </div>
   </div>
 
@@ -233,6 +239,7 @@ button{font-family:inherit;cursor:pointer}
       <div class="read" id="read"><p>Ask how tracking, measurement, targeting, media buying, outbound, email, lead scoring, conversion, content or workflows really work. You'll get a short briefing in my voice, with a figure drawn for each point as I talk.</p></div>
       <div class="playrow hide" id="playrow">
         <button class="btn" id="again">🔊 Hear it</button>
+        <button class="btn hide" id="pause">⏸ Pause</button>
         <button class="btn hide" id="stop">⏹ Stop</button>
         <button class="btn" id="share">🔗 Share</button>
         <button class="btn" id="pdf">📄 Save as PDF</button>
@@ -333,7 +340,7 @@ $("dFull").onclick = () => setDepth("full");
 
 /* ---------- audio unlock ---------- */
 function unlock(){
-  try { if (!ctx) ctx = new (window.AudioContext || window.webkitAudioContext)(); if (ctx.state === "suspended") ctx.resume(); } catch(e) {}
+  try { if (!ctx) ctx = new (window.AudioContext || window.webkitAudioContext)(); if (ctx.state === "suspended" && !paused) ctx.resume(); } catch(e) {}
   try { if ("speechSynthesis" in window) { const u = new SpeechSynthesisUtterance(" "); u.volume = 0; speechSynthesis.speak(u); } } catch(e) {}
 }
 
@@ -344,6 +351,20 @@ try { if (localStorage.getItem("br_voice") === "mute") voicePref = "mute"; } cat
 $("vMan") && ($("vMan").onclick = () => { setVoicePref("man"); unlock(); });
 // Mute: no voice at all; the words and pictures still appear in full.
 $("vMute").onclick = () => { const was = speaking; setVoicePref("mute"); try { if (typeof shortNode !== "undefined" && shortNode) shortNode.stop(); } catch(e) {} try { speechSynthesis.cancel(); } catch(e) {} if (was) { stopVoice(); finish(); } };
+/* ---------- voice speed: Slower, Normal, Faster ---------- */
+let speedPref = "normal";
+try { const s = localStorage.getItem("br_speed"); if (s === "slow" || s === "fast") speedPref = s; } catch(e) {}
+function setSpeed(p){
+  if (p !== speedPref) lastAudio = null;   // re-fetch the voice at the new speed
+  speedPref = p;
+  $("sSlow").classList.toggle("on", p === "slow"); $("sNormal").classList.toggle("on", p === "normal"); $("sFast").classList.toggle("on", p === "fast");
+  try { localStorage.setItem("br_speed", p); } catch(e) {}
+}
+function voiceRate(){ return speedPref === "slow" ? 0.82 : speedPref === "fast" ? 1.14 : 0.98; }
+$("sSlow").onclick = () => { setSpeed("slow"); unlock(); sayShort("Slower speed."); };
+$("sNormal").onclick = () => { setSpeed("normal"); unlock(); sayShort("Normal speed."); };
+$("sFast").onclick = () => { setSpeed("fast"); unlock(); sayShort("Faster speed."); };
+setTimeout(() => setSpeed(speedPref), 0);
 function setVoicePref(p){
   voicePref = p;
   $("vMan").classList.toggle("on", p === "man"); $("vWoman").classList.toggle("on", p === "woman"); $("vMute").classList.toggle("on", p === "mute");
@@ -939,9 +960,10 @@ function highlight(ci){
   if (ci > lastCi) { lastCi = ci; syncBoard(ci); }
 }
 function clearHighlight(){ words.forEach(w => w.el.classList.remove("on","done")); $("read").classList.remove("speaking"); }
-function setSpeaking(on){ speaking = on; $("read").classList.toggle("speaking", on); $("stop").classList.toggle("hide", !on); $("again").classList.toggle("hide", on); if (!on) $("again").textContent = "🔊 Hear it again"; }
+function setSpeaking(on){ speaking = on; $("read").classList.toggle("speaking", on); $("stop").classList.toggle("hide", !on); $("again").classList.toggle("hide", on); if (!on) $("again").textContent = "🔊 Hear it again";  pauseLabel(); }
 function finish(){ setSpeaking(false); words.forEach(w => { w.el.classList.remove("on"); w.el.classList.add("done"); }); onProgress(1); }
 function stopVoice(){
+  unpause();
   clearTimeout(raf);
   try { if (srcNode) { srcNode.onended = null; srcNode.stop(); } } catch(e) {}
   srcNode = null;
@@ -949,6 +971,19 @@ function stopVoice(){
   if (speaking) { setSpeaking(false); clearHighlight(); }
 }
 $("stop").onclick = () => { stopVoice(); onProgress(1); };
+// Pause and Continue: the voice (and the pictures that follow it) wait right where they are.
+var paused = false;
+function pauseLabel(){ const b = $("pause"); if (!b) return; b.textContent = paused ? "▶ Continue" : "⏸ Pause"; b.classList.toggle("hide", !speaking); b.classList.toggle("on", paused); }
+function unpause(){ if (!paused) return; paused = false; try { if (ctx) ctx.resume(); } catch(e) {} try { speechSynthesis.resume(); } catch(e) {} pauseLabel(); }
+$("pause").onclick = () => {
+  if (!speaking) return;
+  if (paused) { unpause(); return; }
+  paused = true;
+  try { if (ctx) ctx.suspend(); } catch(e) {}
+  try { speechSynthesis.pause(); } catch(e) {}
+  pauseLabel();
+};
+
 $("again").onclick = () => { unlock(); if (lastAudio) playBuffer(lastAudio); else speak(); };
 
 async function speak(){
@@ -964,8 +999,8 @@ async function prepareAudio(){
   if (!voiceOff) {
     try {
       const r = speech.length <= 3200
-        ? await fetch("/api/speak?v=3&t=" + encodeURIComponent(speech))      // saved on Vercel's network: repeats are free
-        : await fetch("/api/speak", { method:"POST", headers:{ "content-type":"application/json" }, body: JSON.stringify({ text: speech }) });
+        ? await fetch("/api/speak?v=3&s=" + speedPref + "&t=" + encodeURIComponent(speech))      // saved on Vercel's network: repeats are free
+        : await fetch("/api/speak", { method:"POST", headers:{ "content-type":"application/json" }, body: JSON.stringify({ text: speech, speed: speedPref }) });
       if (r.status === 501) voiceOff = true;
       else if (r.ok) {
         const d = await r.json();
@@ -1013,7 +1048,7 @@ function browserVoice(text){
   const v = pickVoice(); let started = false;
   chunks.forEach((c, idx) => {
     const u = new SpeechSynthesisUtterance(c.text);
-    if (v) u.voice = v; u.rate = 0.98; u.pitch = 1.0;
+    if (v) u.voice = v; u.rate = voiceRate(); u.pitch = 1.0;
     u.onstart = () => { if (!started) { started = true; setSpeaking(true); onProgress(0); } };
     u.onboundary = e => { const ci = c.start + e.charIndex; highlight(ci); onProgress(ci / text.length); };
     if (idx === chunks.length - 1) u.onend = finish;
@@ -1023,7 +1058,7 @@ function browserVoice(text){
 }
 function sayShort(text){
   if (!("speechSynthesis" in window) || !text) return;
-  const u = new SpeechSynthesisUtterance(text); const v = pickVoice(); if (v) u.voice = v; u.rate = 0.98;
+  const u = new SpeechSynthesisUtterance(text); const v = pickVoice(); if (v) u.voice = v; u.rate = voiceRate();
   speechSynthesis.cancel(); speechSynthesis.speak(u);
 }
 if ("speechSynthesis" in window) speechSynthesis.onvoiceschanged = () => {};
