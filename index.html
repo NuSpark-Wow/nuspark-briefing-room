@@ -189,9 +189,10 @@ button{font-family:inherit;cursor:pointer}
         <button id="dQuick" class="on">⚡ Quick<small>1-minute briefing</small></button>
         <button id="dFull">📋 Full<small>3-minute briefing</small></button>
       </div>
-      <div class="toggle hide" role="group" aria-label="Choose a voice">
-        <button id="vMan" class="on">🔊 Man</button>
-        <button id="vWoman">🔊 Woman</button>
+      <div class="toggle" role="group" aria-label="Voice or mute">
+        <button id="vMan" class="on">🔊 Paul's voice</button>
+        <button id="vWoman" class="hide">🔊 Woman</button>
+        <button id="vMute" aria-label="Mute: no voice, read the words">🔇 Mute</button>
       </div>
     </div>
   </div>
@@ -338,10 +339,15 @@ function unlock(){
 
 /* ---------- voice choice ---------- */
 let voicePref = "man";
+try { if (localStorage.getItem("br_voice") === "mute") voicePref = "mute"; } catch(e) {}
 
+$("vMan") && ($("vMan").onclick = () => { setVoicePref("man"); unlock(); });
+// Mute: no voice at all; the words and pictures still appear in full.
+$("vMute").onclick = () => { const was = speaking; setVoicePref("mute"); try { if (typeof shortNode !== "undefined" && shortNode) shortNode.stop(); } catch(e) {} try { speechSynthesis.cancel(); } catch(e) {} if (was) { stopVoice(); finish(); } };
 function setVoicePref(p){
   voicePref = p;
-  $("vMan").classList.toggle("on", p === "man"); $("vWoman").classList.toggle("on", p === "woman");
+  $("vMan").classList.toggle("on", p === "man"); $("vWoman").classList.toggle("on", p === "woman"); $("vMute").classList.toggle("on", p === "mute");
+  try { localStorage.setItem("br_voice", p); } catch(e) {}
 
 }
 
@@ -952,6 +958,7 @@ async function speak(){
 }
 // Gets the recorded-voice audio (or null, meaning use the browser's voice)
 async function prepareAudio(){
+  if (voicePref === "mute") return null;
   if (!speech) return null;
   lastAudio = null; lastProgress = 0;
   if (!voiceOff) {
@@ -974,6 +981,7 @@ async function prepareAudio(){
   return null;
 }
 function playBuffer(a){
+  if (voicePref === "mute") { finish(); return; }
   stopVoice();
   if (!ctx) return browserVoice(speech);
   srcNode = ctx.createBufferSource(); srcNode.buffer = a.buf; srcNode.connect(ctx.destination);
@@ -992,6 +1000,7 @@ function playBuffer(a){
 }
 // Long lectures are spoken in chunks so browsers don't cut off midway.
 function browserVoice(text){
+  if (voicePref === "mute") { finish(); return; }
   if (!("speechSynthesis" in window)) { onProgress(1); return; }
   stopVoice();
   const chunks = []; const re = /[^.!?]+[.!?]+["')\]]*\s*|[^.!?]+$/g; let m, buf = "", bufStart = 0;
