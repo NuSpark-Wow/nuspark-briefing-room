@@ -105,6 +105,9 @@ DRAWINGS (KIND: drawing): SVG ELEMENTS ONLY (no <svg> wrapper) on an 800 wide x 
 - Colors only: #f4f7fb (white ink), #7fd3ff (cyan), #ffc857 (amber), #ff8a7a (coral), #8ee6b5 (mint), #c3b5ff (lilac). Mostly white and cyan, amber for emphasis. Fills, if any, use fill-opacity='0.2'.
 - Lines: stroke-width 3 to 5, stroke-linecap='round'. Boxes: rect with rx='10'. Arrows: a line plus a small polyline head.
 - Text: font-family='Kalam' font-size 20 to 32. Short labels, 1-4 words. Put labels inside boxes only when the box is big enough; otherwise BELOW or BESIDE the shape, never across a line.
+- TEXT IN A BOX OR PILL: center it. For a box at y=Y with height H, put the text at y = Y + H/2 + 0.35 x font-size with text-anchor='middle' at the box's center x, and make the box at least font-size + 24 tall.
+- ROWS: anything stacked vertically keeps at least 20px of empty space between rows. Never put a box or pill on top of other words. Do not crowd the bottom of the board.
+- LABELS NEVER SIT ON A LINE: keep words at least 12px away from ground lines and box borders.
 - LAYOUT: plan positions first. Objects must not overlap; leave 25px between things; keep inside x 30-770, y 30-470. Max 16 elements. Each figure stands alone (the board is cleared between figures).
 
 CHARTS (KIND: chart):
