@@ -1352,6 +1352,20 @@ function sayShort(text){
 if ("speechSynthesis" in window) speechSynthesis.onvoiceschanged = () => {};
 
 /* ---------- welcome ---------- */
+// The intro waits until the board is actually on screen, so it isn't missed while someone reads the top of the page.
+var boardSeen = false, boardInView = true, introQueue = null;
+(function(){
+  const el = document.getElementById("svg");
+  if (!el || !("IntersectionObserver" in window)) { boardSeen = true; return; }
+  boardInView = false;
+  try {
+    new IntersectionObserver(es => { es.forEach(e => {
+      boardInView = e.isIntersecting && e.intersectionRatio >= 0.45;
+      if (boardInView) { boardSeen = true; if (introQueue) { const f = introQueue; introQueue = null; f(); } }
+    }); }, { threshold: [0, 0.45, 0.8] }).observe(el);
+  } catch(e) { boardSeen = true; boardInView = true; }
+})();
+function whenBoardSeen(fn){ if (boardSeen) fn(); else introQueue = fn; }
 function welcome(){
   const box = (x, label, color) => `<rect x='${x}' y='250' width='130' height='70' rx='12' fill='${color}' fill-opacity='0.2' stroke='${color}' stroke-width='3'/><text x='${x + 65}' y='294' text-anchor='middle' font-family='Kalam' font-size='24' fill='#f4f7fb'>${label}</text>`;
   const arrow = x => `<line x1='${x}' y1='285' x2='${x + 34}' y2='285' stroke='#f4f7fb' stroke-width='3' stroke-linecap='round'/><polyline points='${x + 24},277 ${x + 34},285 ${x + 24},293' fill='none' stroke='#f4f7fb' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/>`;
@@ -1361,7 +1375,7 @@ function welcome(){
     "<line x1='230' y1='180' x2='570' y2='180' stroke='#ffc857' stroke-width='3' stroke-linecap='round'/>" +
     box(40, "Signal", "#7fd3ff") + arrow(178) + box(220, "Lead", "#8ee6b5") + arrow(358) + box(400, "Pipeline", "#c3b5ff") + arrow(538) + box(580, "Revenue", "#ffc857") +
     "<text x='400' y='420' text-anchor='middle' font-family='Kalam' font-size='34' fill='#f4f7fb'>Pick a topic and ask away.</text>" }]);
-  (document.fonts ? document.fonts.ready : Promise.resolve()).then(() => { if (liveBoard || lesson || busy) return; manual = true; showFigure(0); });
+  (document.fonts ? document.fonts.ready : Promise.resolve()).then(() => whenBoardSeen(() => { if (liveBoard || lesson || busy) return; manual = true; showFigure(0); }));
 }
 
 /* ---------- start ---------- */
